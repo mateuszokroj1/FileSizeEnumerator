@@ -27,8 +27,6 @@ namespace FileSizeEnumerator
                 throw new ArgumentException("List is read-only.");
 
             IsWorkingObservable.OnNext(false);
-
-            this.worker = new Thread(ThreadStart);
         }
 
         #endregion
@@ -47,7 +45,7 @@ namespace FileSizeEnumerator
 
         public string StartingPath { get; set; }
 
-        public long MinimumFileSize { get; set; } = 100_000_000;
+        public ulong MinimumFileSize { get; set; } = 100_000_000;
 
         public ICollection<FileInfo> List { get; set; }
 
@@ -73,6 +71,7 @@ namespace FileSizeEnumerator
 
             IsCanceling = false;
 
+            this.worker = new Thread(ThreadStart);
             this.worker.Start();
         }
 
@@ -110,7 +109,7 @@ namespace FileSizeEnumerator
                 try
                 {
                     info = new FileInfo(path);
-                    if (info.Length < MinimumFileSize) continue;
+                    if ((ulong)info.Length < MinimumFileSize) continue;
                 }
                 catch (Exception exc) when (exc is IOException || exc is UnauthorizedAccessException)
                 {
@@ -154,7 +153,7 @@ namespace FileSizeEnumerator
         public void Dispose()
         {
             Cancel();
-            if (this.worker.ThreadState == System.Threading.ThreadState.Running)
+            if (this.worker?.ThreadState == System.Threading.ThreadState.Running)
                 this.worker.Abort();
 
             IsWorkingObservable.OnCompleted();

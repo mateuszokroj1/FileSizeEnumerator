@@ -40,6 +40,7 @@ namespace FileSizeEnumerator.UI
                 PropertyChangedObservable.Where(propertyName => propertyName == nameof(SelectedFile)).Select(p => SelectedFile != null),
                 () => ShowInExplorer()
             );
+            SaveToCsvCommand = new Command(() => SaveToCSV());
         }
 
         #endregion
@@ -70,6 +71,11 @@ namespace FileSizeEnumerator.UI
             set => SetProperty(ref this.selectedFile, value);
         }
 
+        public ulong MinimumSize
+        {
+            get => this.enumerator.MinimumFileSize;
+        }
+
         public bool CanRun => !IsWorking && !string.IsNullOrWhiteSpace(Path);
 
         public bool CanEditPath => !IsWorking;
@@ -91,6 +97,8 @@ namespace FileSizeEnumerator.UI
         public ICommand RunCommand { get; }
 
         public ICommand ShowInExplorerCommand { get; }
+
+        public ICommand SaveToCsvCommand { get; }
 
         #endregion
 
@@ -146,6 +154,17 @@ namespace FileSizeEnumerator.UI
                 FileName = "explorer.exe",
                 Arguments = $"/e, /select, \"{SelectedFile.FullName}\""
             });
+        }
+
+        public void SaveToCSV()
+        {
+            if (Files?.Count < 1) return;
+
+            var filename = $"{Guid.NewGuid().ToString()}.csv";
+            var path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), filename);
+
+            using var file = File.CreateText(path);
+
         }
 
         public void Dispose()
