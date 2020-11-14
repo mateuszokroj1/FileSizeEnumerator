@@ -82,9 +82,11 @@
                   Grid.ColumnSpan="6"
                   ItemsSource="{Binding Files}"
                   SelectedItem="{Binding SelectedFile}"
+                  SelectionMode="Single"
+                  
         >
             <ListView.View>
-                <GridView>
+                <GridView AllowsColumnReorder="True">
                     <GridViewColumn Header="Path"
                                     Width="300"
                                     DisplayMemberBinding="{Binding FullName}"
