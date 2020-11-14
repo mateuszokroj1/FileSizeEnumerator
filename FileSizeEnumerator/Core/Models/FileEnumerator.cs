@@ -34,6 +34,7 @@ namespace FileSizeEnumerator
         #region Fields
 
         private Thread worker;
+        private volatile bool isWorkingInTopDirectory = true;
 
         #endregion
 
@@ -70,6 +71,8 @@ namespace FileSizeEnumerator
                 throw new DirectoryNotFoundException();
 
             IsCanceling = false;
+
+            this.isWorkingInTopDirectory = true;
 
             this.worker = new Thread(ThreadStart);
             this.worker.Start();
@@ -142,12 +145,27 @@ namespace FileSizeEnumerator
             }
             catch (DirectoryNotFoundException) { return; }
 
-            foreach (var directory in directories)
+            if (this.isWorkingInTopDirectory)
             {
-                if (IsCanceling) return;
+                this.isWorkingInTopDirectory = false;
+                Parallel.ForEach(directories, (directory, state) =>
+                {
+                    if (IsCanceling)
+                        state.Stop();
 
-                EnumerateFiles(directory);
+                    if (state.IsStopped || state.IsExceptional)
+                        return;
+
+                    EnumerateFiles(directory);
+                });
             }
+            else
+                foreach (var directory in directories)
+                {
+                    if (IsCanceling) return;
+
+                    EnumerateFiles(directory);
+                }
         }
 
         public void Dispose()

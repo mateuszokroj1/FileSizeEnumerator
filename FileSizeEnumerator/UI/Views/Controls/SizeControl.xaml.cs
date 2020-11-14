@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Reactive.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace FileSizeEnumerator.UI
 {
@@ -21,18 +16,33 @@ namespace FileSizeEnumerator.UI
         public SizeControl()
         {
             InitializeComponent();
-            var binding = new Binding("Length");
-            binding.Source = DataContext;
-            binding.Mode = BindingMode.TwoWay;
-            SetBinding(SizeProperty, binding);
+            var model = new SizeControlViewModel();
+            DataContext = model;
+
+            model.PropertyChangedObservable.Where(name => name == "Length").Subscribe(name => Size = model.Length);
         }
 
-        public static readonly DependencyProperty SizeProperty = DependencyProperty.Register("Size", typeof(long), typeof(SizeControl));
+        private const ulong InitialValue = 0;
 
-        public long Size
+        public static readonly DependencyProperty SizeProperty = DependencyProperty.Register
+            (
+                "Size",
+                typeof(ulong),
+                typeof(SizeControl),
+                new PropertyMetadata(InitialValue, SizeProperty_Changed)
+            );
+
+        public ulong Size
         {
-            get => (long)GetValue(SizeProperty);
+            get => (ulong)GetValue(SizeProperty);
             set => SetValue(SizeProperty, value);
+        }
+
+        private static void SizeProperty_Changed(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is Control control && control.DataContext is SizeControlViewModel model)
+                if (!Equals(model.Length, e.NewValue))
+                    model.Length = (ulong)e.NewValue;
         }
     }
 }

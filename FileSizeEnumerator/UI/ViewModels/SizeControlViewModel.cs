@@ -61,9 +61,8 @@ namespace FileSizeEnumerator.UI
             set => SetProperties(ref this.size, value, nameof(Size), nameof(Length));
         }
 
-        private double GetUnitQuantity(SizeUnits sizeUnits)
-        {
-            return sizeUnits switch
+        private double GetUnitQuantity(SizeUnits sizeUnits) =>
+            sizeUnits switch
             {
                 SizeUnits.kB => 1000.0,
                 SizeUnits.MB => 1_000_000.0,
@@ -71,6 +70,5 @@ namespace FileSizeEnumerator.UI
                 SizeUnits.TB => 1_000_000_000_000.0,
                 _ => 1.0,
             };
-        }
     }
 }

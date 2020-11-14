@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reactive.Linq;
@@ -22,25 +24,49 @@ namespace FileSizeEnumerator.UI
             this.enumerator = new FileEnumerator(Files);
             this.enumerator.Synchronization = SynchronizationContext;
 
-            this.enumerator.IsWorkingObservable.ObserveOnDispatcher().Subscribe(value => IsWorking = value);
+            this.enumerator.IsWorkingObservable
+                .ObserveOnDispatcher()
+                .Subscribe(value => IsWorking = value);
 
             BrowseCommand = new Command(() => Browse());
             CancelCommand = new ReactiveCommand
             (
-                PropertyChangedObservable.Where(propertyName => propertyName == nameof(IsWorking)).Select(p => IsWorking),
+                PropertyChangedObservable
+                .Where(propertyName => propertyName == nameof(IsWorking))
+                .Select(p => IsWorking),
                 () => Cancel()
             );
             RunCommand = new ReactiveCommand
             (
-                PropertyChangedObservable.Where(propertyName => propertyName == nameof(CanRun)).Select(p => CanRun),
+                PropertyChangedObservable
+                .Where(propertyName => propertyName == nameof(CanRun))
+                .Select(p => CanRun),
                 () => Run()
             );
             ShowInExplorerCommand = new ReactiveCommand
             (
-                PropertyChangedObservable.Where(propertyName => propertyName == nameof(SelectedFile)).Select(p => SelectedFile != null),
+                PropertyChangedObservable
+                .Where(propertyName => propertyName == nameof(SelectedFile))
+                .Select(p => SelectedFile != null),
                 () => ShowInExplorer()
             );
-            SaveToCsvCommand = new Command(() => SaveToCSV());
+            SaveToCsvCommand = new ReactiveCommand
+            (
+                PropertyChangedObservable
+                .Where(propertyName => propertyName == nameof(IsWorking))
+                .Select(p => !IsWorking),
+                () => SaveToCSV()
+            );
+            ClearCommand = new ReactiveCommand
+            (
+                Observable.FromEventPattern<NotifyCollectionChangedEventHandler, NotifyCollectionChangedEventArgs>
+                (
+                    handler => Files.CollectionChanged += handler,
+                    handler => Files.CollectionChanged -= handler
+                )
+                .Select(args => Files.Count > 0),
+                () => Files.Clear()
+            );
         }
 
         #endregion
@@ -74,6 +100,14 @@ namespace FileSizeEnumerator.UI
         public ulong MinimumSize
         {
             get => this.enumerator.MinimumFileSize;
+            set
+            {
+                if(this.enumerator.MinimumFileSize != value)
+                {
+                    this.enumerator.MinimumFileSize = value;
+                    RaisePropertyChanged(nameof(MinimumSize));
+                }    
+            }
         }
 
         public bool CanRun => !IsWorking && !string.IsNullOrWhiteSpace(Path);
@@ -99,6 +133,8 @@ namespace FileSizeEnumerator.UI
         public ICommand ShowInExplorerCommand { get; }
 
         public ICommand SaveToCsvCommand { get; }
+
+        public ICommand ClearCommand { get; }
 
         #endregion
 
@@ -136,7 +172,7 @@ namespace FileSizeEnumerator.UI
                 Title = "Select directory"
             };
 
-            if (dialog.ShowDialog() != CommonFileDialogResult.Ok && string.IsNullOrEmpty(dialog.FileName)) return;
+            if (dialog.ShowDialog() != CommonFileDialogResult.Ok || string.IsNullOrEmpty(dialog.FileName)) return;
 
             if (Directory.Exists(dialog.FileName))
                 Path = dialog.FileName;
@@ -156,15 +192,28 @@ namespace FileSizeEnumerator.UI
             });
         }
 
-        public void SaveToCSV()
+        public async void SaveToCSV()
         {
             if (Files?.Count < 1) return;
 
-            var filename = $"{Guid.NewGuid().ToString()}.csv";
+            var filename = $"{Guid.NewGuid()}.csv";
             var path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), filename);
 
-            using var file = File.CreateText(path);
+            using var streamWriter = File.CreateText(path);
 
+            if (Files.Count > 1000)
+                Parallel.ForEach
+                (
+                    Files,
+                    async fileInfo => await streamWriter.WriteLineAsync($"{fileInfo.FullName};{fileInfo.Length}")
+                );
+            else
+                foreach(var fileInfo in Files)
+                    await streamWriter.WriteLineAsync($"{fileInfo.FullName};{fileInfo.Length}");
+
+            await streamWriter.FlushAsync();
+
+            MessageBox.Show($"File '{filename}' saved on desktop successfully.", "File Size Enumerator", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         public void Dispose()

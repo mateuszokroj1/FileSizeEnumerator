@@ -6,12 +6,41 @@
              xmlns:local="clr-namespace:FileSizeEnumerator.UI"
              mc:Ignorable="d"
              x:Name="Control"
-             d:DesignHeight="260" d:DesignWidth="680">
-    <UserControl.DataContext>
-        <local:SizeControlViewModel />
-    </UserControl.DataContext>
+             MaxHeight="100"
+             MinHeight="40"
+             VerticalAlignment="Center"
+             d:DesignHeight="100" d:DesignWidth="300">
     <Grid>
-        <TextBox x:Name="SizeText" IsEnabled="{Binding IsEnabled, ElementName=Control, Mode=OneWay}" Text="{Binding Size, UpdateSourceTrigger=LostFocus}" />
-        <ComboBox x:Name="Unit" IsEditable="False" IsEnabled="{Binding IsEnabled, ElementName=Control, Mode=OneWay}" ItemsSource="{Binding Units}" Text="{Binding SelectedUnit}" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="60" />
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="SizeText"
+                 Grid.Row="0"
+                 Grid.Column="0"
+                 VerticalAlignment="Center"
+                 HorizontalAlignment="Stretch"
+                 AcceptsReturn="False"
+                 AcceptsTab="False"
+                 VerticalContentAlignment="Center"
+                 Margin="5"
+                 IsEnabled="{Binding IsEnabled, ElementName=Control, Mode=OneWay}"
+                 Text="{Binding Size, UpdateSourceTrigger=LostFocus}"
+        />
+        <ComboBox x:Name="Unit"
+                  Grid.Row="0"
+                  Grid.Column="1"
+                  VerticalAlignment="Center"
+                  HorizontalAlignment="Stretch"
+                  VerticalContentAlignment="Center"
+                  Margin="5"
+                  IsEditable="False"
+                  IsEnabled="{Binding IsEnabled, ElementName=Control, Mode=OneWay}"
+                  ItemsSource="{Binding Units}"
+                  Text="{Binding SelectedUnit}"
+        />
     </Grid>
 </UserControl>
